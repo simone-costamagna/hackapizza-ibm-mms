@@ -9,6 +9,7 @@ from langchain_core.runnables import Runnable, RunnablePassthrough
 from langchain_neo4j import Neo4jGraph
 from pydantic import BaseModel, Field
 from difflib import SequenceMatcher
+from typing import List
 
 from tqdm import tqdm
 
@@ -25,15 +26,15 @@ neo4j_graph = Neo4jGraph(url=NEO4J_URI, username=NEO4J_USERNAME, password=NEO4J_
 
 prompt_cypher = ChatPromptTemplate([
         ("system", PROMPT_QUERY_CYPHER),
-        ("human", "Generami la query cypher per rispondere alla domanda basandoti sullo schema del grafo.\n\nchema del grafo: {schema}\n\nDomanda: {domanda}"),
+        ("human", "Generami tutte le possibili query cypher per rispondere alla domanda basandoti sullo schema del grafo.\n\nSchema del grafo: {schema}\n\nDomanda: {domanda}"),
 ])
 
 class QueryCypher(BaseModel):
-    query_cypher: str = Field(description="Query cypher to answer the question")
+    queries_cypher: List[str] = Field(description="List of cypher queries to answer the question")
 
 
 def extract_query(state):
-    return state['response' ].query_cypher
+    return state['response'].queries_cypher
 
 
 wrapper = LLMWrapper(model_id="gpt-4o")
@@ -55,14 +56,16 @@ def get_query_cypher(state):
 
 def execute_query(state):
     query_cypher = state['query_cypher']
+    results = []
+    for q in query_cypher:
+        # print(neo4j_graph.schema)
+        try:
+            response = neo4j_graph.query(q)
+        except Exception as e:
+            return None
+        results += response
 
-    # print(neo4j_graph.schema)
-    try:
-        response = neo4j_graph.query(query_cypher)
-    except Exception as e:
-        return None
-
-    return response
+    return results
 
 
 def extract_id_plates(state):
@@ -90,14 +93,14 @@ def extract_id_plates(state):
                         d = SequenceMatcher(None, key, name).ratio()
                         if d > best_match[2]:
                             best_match = [key, value, d]
-                ids.append([best_match[1]])
+                ids.append(best_match[1])
         except KeyError:
             logging.warning("No found plate")
 
     if len(ids) == 0:
         return [50]
 
-    return ids
+    return list(set(ids))
 
 
 executor_chain = (
