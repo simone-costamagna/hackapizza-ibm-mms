@@ -78,6 +78,9 @@ def load_documents(state):
 
     logging.info(f"{len(files_content)} file proccessed")
 
+    return files_content
+
+
 
 preprocceser_chain = (
     RunnablePassthrough.assign(files=load_documents)
