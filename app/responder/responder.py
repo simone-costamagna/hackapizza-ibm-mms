@@ -42,7 +42,7 @@ def extract_id_plates(state):
 
 
 
-map_chain = RunnableParallel(executor_chain=executor_chain)
+map_chain = RunnableParallel(executor_chain=executor_chain, query_embedding=query_embedding)
 
 def load_csv(file_path):
     with open(file_path, "r", encoding="utf-8") as f:
@@ -63,8 +63,8 @@ ids = []
 for domanda in tqdm(domande[1:], desc="processing question"):
     response = map_chain.invoke({"domanda": domanda, "json_mapping": data})
     id = extract_id_plates(response['executor_chain'])
-    # id_ = response['query_embedding']['ids']
-    # id.extend(id_)
+    id_ = response['query_embedding']['ids']
+    id.extend(id_)
     list(set(id))
     if len(id) == 0:
         ids.append([50])

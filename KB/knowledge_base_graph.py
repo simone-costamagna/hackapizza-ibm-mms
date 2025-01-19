@@ -10,9 +10,9 @@ logger = logging.getLogger(__name__)
 
 knowledge_base_chain = (
     preprocceser_chain
-    # | abstract_entity_extractor
+    | abstract_entity_extractor
     | populator_chain
-    # | create_embedding
+    | create_embedding
 )
 
 knowledge_base_chain.invoke({})
