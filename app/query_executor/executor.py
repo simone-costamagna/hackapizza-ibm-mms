@@ -1,19 +1,13 @@
-import csv
-import json
 import logging
 import os
-import pandas
 from dotenv import load_dotenv
 from langchain_core.prompts import ChatPromptTemplate
-from langchain_core.runnables import Runnable, RunnablePassthrough
+from langchain_core.runnables import RunnablePassthrough
 from langchain_neo4j import Neo4jGraph
 from pydantic import BaseModel, Field
 from difflib import SequenceMatcher
 from typing import List
-
-from tqdm import tqdm
-
-from app.QUERY_EXECUTOR.prompts import PROMPT_QUERY_CYPHER
+from app.query_executor.prompts import PROMPT_QUERY_CYPHER
 from utils.wrapper import LLMWrapper
 
 load_dotenv()
@@ -69,12 +63,9 @@ def execute_query(state):
 
 
 def extract_id_plates(state):
-    path = 'data/Misc/dish_mapping.json'
-
-    with open(path, "r", encoding="utf-8") as file:
-        data = json.load(file)
-
+    data = state['json_mapping']
     ids = []
+
     if state['context'] is None:
         return [50]
 
@@ -90,9 +81,10 @@ def extract_id_plates(state):
                     if best_match is None:
                         best_match = [key, value, SequenceMatcher(None, key, name).ratio()]
                     else:
-                        d = SequenceMatcher(None, key, name).ratio()
-                        if d > best_match[2]:
-                            best_match = [key, value, d]
+                        if name in key:
+                        # d = SequenceMatcher(None, key, name).ratio()
+                        # if d > best_match[2]:
+                            best_match = [key, value, None]
                 ids.append(best_match[1])
         except KeyError:
             logging.warning("No found plate")
@@ -106,39 +98,5 @@ def extract_id_plates(state):
 executor_chain = (
     RunnablePassthrough.assign(query_cypher=get_query_cypher)
     | RunnablePassthrough.assign(context=execute_query)
-    | RunnablePassthrough.assign(id_plates=extract_id_plates)
+    | RunnablePassthrough.assign(ids_plates=extract_id_plates)
 )
-
-# executor_chain.invoke({"domanda": "Quali sono i piatti che includono le Chocobo Wings come ingrediente?"})
-
-
-
-def load_csv(file_path):
-    with open(file_path, "r", encoding="utf-8") as f:
-        reader = csv.reader(f)
-        csv_content = []
-        for row in reader:
-            csv_content.append(", ".join(row))
-        # text = "\n".join(csv_content).strip()
-        return csv_content
-
-domande = load_csv("data/domande.csv")
-
-ids = []
-
-
-
-for domanda in tqdm(domande[1:], desc="processing question"):
-    response = executor_chain.invoke({"domanda": domanda})
-    ids.append(response['id_plates'])
-
-
-pandas.DataFrame()
-results = []
-for index, id in enumerate(ids):
-   results.append({'row_id': index+1, 'result': ','.join([str(el) for el in id])})
-
-file = pandas.DataFrame(results)
-
-file.to_csv("responses.csv", index=False)
-
