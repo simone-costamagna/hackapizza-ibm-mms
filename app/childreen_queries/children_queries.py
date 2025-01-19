@@ -33,6 +33,7 @@ class OverallState(TypedDict):
     subtasks: Annotated[list[str], operator.add]
     cypher_queries: Annotated[list[str], operator.add]
     responses: Annotated[list[str], operator.add]
+    schema: str
 
 
 # SUBTASK
@@ -45,7 +46,7 @@ wrapper.set_structured_output(Subtasks)
 
 prompt_subtask = ChatPromptTemplate([
     ("system", PROMPT_SUBTASK),
-    ("human", "Domanda da scomporre: {question}"),
+    ("human", "Schema del database: {schema}\nDomanda da scomporre: {question}"),
 ])
 
 runnable_subtask = ( prompt_subtask | wrapper.llm)
@@ -107,13 +108,13 @@ graph.add_edge("execute_cypher", END)
 
 children_queries_graph = graph.compile()
 
-def children_queries(state):
-    question = state['question']
-    res = app.invoke({
-            "question": question
-        })
+# def children_queries(state):
+#     question = state['question']
+#     res = children_queries_graph.invoke({
+#             "question": question
+#         })
 
-    return res.responses
+#     return res.responses
 
 
 def load_csv(file_path):
@@ -125,24 +126,25 @@ def load_csv(file_path):
         # text = "\n".join(csv_content).strip()
         return csv_content
 
-domande = load_csv("data/domande.csv")
+domande = load_csv("/home/mattiasangermano/Developer/MattiaSangermano/hackpizza/hackapizza-ibm-mms/data/domande.csv")
 
 
 def extract(response):
-    path = 'data/Misc/dish_mapping.json'
+    path = '/home/mattiasangermano/Developer/MattiaSangermano/hackpizza/hackapizza-ibm-mms/data/Misc/dish_mapping.json'
     with open(path, "r", encoding="utf-8") as file:
         data = json.load(file)
 
     ids = []
     for r in response:
         piatti = r[1]
+        c_ids = []
         if piatti is not None:
             for plate in piatti:
                 try:
                     name = plate['p']['nome']
 
                     try:
-                        ids.append(data[name])
+                        c_ids.append(data[name])
                     except Exception as e:
                         best_match = None
                         for key, value in data.items():
@@ -152,20 +154,23 @@ def extract(response):
                                 d = SequenceMatcher(None, key, name).ratio()
                                 if d > best_match[2]:
                                     best_match = [key, value, d]
-                        ids.append(best_match[1])
+                        c_ids.append(best_match[1])
                 except KeyError:
                     logging.warning("No found plate")
-
+        ids.append(c_ids)
+    ids = [el for el in ids if el != []]
     if len(ids) == 0:
         return [50]
-    else:
-        return list(set(ids))
+    result = set(ids[0])
+    for lst in ids[1:]:
+        result.intersection_update(lst)
+    return list(set(result))
 
 
 
 ids = []
-for domanda in tqdm(domande[1:], desc="processing question"):
-    response = app.invoke({"question": domanda})
+for domanda in tqdm(domande[4:8], desc="processing question"):
+    response = children_queries_graph.invoke({"question": domanda, "schema": neo4j_graph.schema})
     ids.append(extract(response['responses']))
 
 
