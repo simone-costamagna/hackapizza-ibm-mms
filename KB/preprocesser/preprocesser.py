@@ -61,20 +61,22 @@ def load_documents(state):
         for file in files:
             text = None
             file_path = os.path.join(root, file)
-            if file.lower().endswith('.pdf'):
-                text = load_pdf(file_path)
-            elif file.lower().endswith('.docx'):
-                text = load_docx(file_path)
-            elif file.lower().endswith('.html'):
-                text = load_html(file_path)
-            elif file.lower().endswith('.txt'):
-                text = load_txt(file_path)
-            elif file.lower().endswith('.csv'):
-                text = load_csv(file_path)
-            else:
-                logging.warning(f"No parser for: {file_path}")
 
-            files_content.append(text)
+            if not 'domande' in file_path:
+                if file.lower().endswith('.pdf'):
+                    text = load_pdf(file_path)
+                elif file.lower().endswith('.docx'):
+                    text = load_docx(file_path)
+                elif file.lower().endswith('.html'):
+                    text = load_html(file_path)
+                elif file.lower().endswith('.txt'):
+                    text = load_txt(file_path)
+                elif file.lower().endswith('.csv'):
+                    text = load_csv(file_path)
+                else:
+                    logging.warning(f"No parser for: {file_path}")
+
+                files_content.append(text)
 
     logging.info(f"{len(files_content)} file proccessed")
 
