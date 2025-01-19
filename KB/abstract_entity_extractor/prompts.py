@@ -5,7 +5,8 @@ PROMPT_PROCESS_FILE = ("Sei un assistente esperto nell'analisi di testi finalizz
           "- Relazioni astratte (archi)\n."
           "- Attributi astratti (proprietà dei nodi e delle relazioni).\n"
           "L'output richiesto è uno schema del grafo strutturato come segue:"
-          "- node_properties: elenco delle proprietà astratte da associare ai nodi astratti.\n"
+          "- node_properties: elenco delle proprietà astratte da associare ai nodi astratti. (ogni nodo deve includere una"
+                       "proprietà 'nome').\n"
           "- relationship_properties: elenco delle proprietà astratte da associare alle relazioni astratte.\n"
           "- the_relationships: elenco delle relazioni astratte, indicando i nodi astratti coinvolti.\n"
           "Assicurati che l'output sia chiaro e ben organizzato e che tutte le entità siano astratte.")

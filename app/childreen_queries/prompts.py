@@ -1,5 +1,5 @@
-PROMPT_SUBTASK=("Sei un assistente esperto nell'analisi di domande. Il tuo compito è prendere in input una domanda e scomporla in una lista di"
-                " subtask semplici che facilitino la risoluzione del problema.")
+PROMPT_SUBTASK=("Sei un assistente esperto nell'analisi di domande. Il tuo compito è prendere in input una domanda e scomporla in due massimo tre sotto domande"
+                "al fine di semplificare la creazione di una query cypher.")
 
 PROMPT_CONVERTER = (
     "Genera query Cypher per interrogare un database a grafi di Neo4j seguendo la definizione dello schema fornito.\n"

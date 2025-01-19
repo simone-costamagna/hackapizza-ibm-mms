@@ -8,6 +8,37 @@ from bs4 import BeautifulSoup  # For HTML parsing
 import csv
 
 
+schema = """
+Node properties:
+Ristorante {nome: STRING, posizione: STRING}
+Chef {nome: STRING, background: STRING}
+Piatto {nome: STRING, descrizione: STRING}
+Ingrediente {nome: STRING, tipo: STRING, origine: STRING}
+Tecnica {nome: STRING, descrizione: STRING}
+Licenza {nome: STRING, livello: INTEGER}
+Menu {nome: STRING}
+Cristallo {nome: STRING, proprietà: STRING}
+Sala {nome: STRING}
+Banchetto {nome: STRING}
+Ordine {nome: STRING}
+Pianeta {nome: STRING}
+Relationship properties:
+CUCINA {difficoltà: STRING}
+CONTIENE {quantità: INTEGER}
+ISCRITTO {data: STRING}
+DISTANZA {distanza: INTEGER}
+The relationships:
+(:Ristorante)-[:POSSIEDE]->(:Chef)
+(:Chef)-[:CUCINA]->(:Piatto)
+(:Piatto)-[:CONTIENE]->(:Ingrediente)
+(:Piatto)-[:HA_TECNICA]->(:Tecnica)
+(:Ristorante)-[:SERVE]->(:Piatto)
+(:Chef)-[:ISCRITTO]->(:Ordine)
+(:Chef)-[:HA_LICENZA]->(:Licenza)
+(:Pianeta)-[:DISTANZA]->(:Pianeta)
+(:RISTORANTE)-[:SI_TROVA]->(:Pianeta)
+"""
+
 def load_pdf(file_path):
     doc = fitz.open(file_path)
     text = ""
@@ -86,4 +117,5 @@ def load_documents(state):
 
 preprocceser_chain = (
     RunnablePassthrough.assign(files=load_documents)
+    | RunnablePassthrough.assign(schema=lambda x: schema)
 )

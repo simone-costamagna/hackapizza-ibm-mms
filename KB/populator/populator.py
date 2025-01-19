@@ -81,6 +81,9 @@ def populate_db(state):
     for q in tqdm(queries, desc="Executing queries..."):
         execute_cypher_queries(q)
 
+    query_element = "MATCH (n) SET n:Element"
+    execute_cypher_queries(query_element)
+
     logging.info("Populate db completed")
 
 

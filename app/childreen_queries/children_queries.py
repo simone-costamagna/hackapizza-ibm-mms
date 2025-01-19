@@ -33,7 +33,8 @@ class OverallState(TypedDict):
     subtasks: Annotated[list[str], operator.add]
     cypher_queries: Annotated[list[str], operator.add]
     responses: Annotated[list[str], operator.add]
-    schema: str
+    schema: Annotated[list[str], operator.add]
+    json_mapping: dict
 
 
 # SUBTASK
@@ -96,46 +97,11 @@ def execute_cypher(state):
     return {'responses': list(zip(state['subtasks'], responses))}
 
 
-graph = StateGraph(OverallState)
-graph.add_node("decompose_query", decompose_query)
-graph.add_node("convert_to_cypher", convert_to_cypher)
-graph.add_node("execute_cypher", execute_cypher)
-
-graph.add_edge(START, "decompose_query")
-graph.add_edge("decompose_query", "convert_to_cypher")
-graph.add_edge("convert_to_cypher", "execute_cypher")
-graph.add_edge("execute_cypher", END)
-
-children_queries_graph = graph.compile()
-
-# def children_queries(state):
-#     question = state['question']
-#     res = children_queries_graph.invoke({
-#             "question": question
-#         })
-
-#     return res.responses
-
-
-def load_csv(file_path):
-    with open(file_path, "r", encoding="utf-8") as f:
-        reader = csv.reader(f)
-        csv_content = []
-        for row in reader:
-            csv_content.append(", ".join(row))
-        # text = "\n".join(csv_content).strip()
-        return csv_content
-
-domande = load_csv("/home/mattiasangermano/Developer/MattiaSangermano/hackpizza/hackapizza-ibm-mms/data/domande.csv")
-
-
-def extract(response):
-    path = '/home/mattiasangermano/Developer/MattiaSangermano/hackpizza/hackapizza-ibm-mms/data/Misc/dish_mapping.json'
-    with open(path, "r", encoding="utf-8") as file:
-        data = json.load(file)
+def extract_response(response):
+    data = response['json_mapping']
 
     ids = []
-    for r in response:
+    for r in response["responses"]:
         piatti = r[1]
         c_ids = []
         if piatti is not None:
@@ -156,30 +122,29 @@ def extract(response):
                                     best_match = [key, value, d]
                         c_ids.append(best_match[1])
                 except KeyError:
-                    logging.warning("No found plate")
+                    # logging.warning("No found plate")
+                    pass
         ids.append(c_ids)
     ids = [el for el in ids if el != []]
     if len(ids) == 0:
-        return [50]
+        return []
     result = set(ids[0])
     for lst in ids[1:]:
         result.intersection_update(lst)
-    return list(set(result))
+
+    return {"ids": list(set(result))}
 
 
+graph = StateGraph(OverallState)
+graph.add_node("decompose_query", decompose_query)
+graph.add_node("convert_to_cypher", convert_to_cypher)
+graph.add_node("execute_cypher", execute_cypher)
+graph.add_node("extract_response", extract_response)
 
-ids = []
-for domanda in tqdm(domande[4:8], desc="processing question"):
-    response = children_queries_graph.invoke({"question": domanda, "schema": neo4j_graph.schema})
-    ids.append(extract(response['responses']))
+graph.add_edge(START, "decompose_query")
+graph.add_edge("decompose_query", "convert_to_cypher")
+graph.add_edge("convert_to_cypher", "execute_cypher")
+graph.add_edge("execute_cypher", "extract_response")
+graph.add_edge("extract_response", END)
 
-
-pandas.DataFrame()
-results = []
-for index, id in enumerate(ids):
-   results.append({'row_id': index+1, 'result': ','.join([str(el) for el in id])})
-
-file = pandas.DataFrame(results)
-
-file.to_csv("responses_II.csv", index=False)
-
+children_queries_graph = graph.compile()
